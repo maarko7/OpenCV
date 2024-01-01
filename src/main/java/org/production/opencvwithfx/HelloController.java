@@ -1,17 +1,20 @@
 package org.production.opencvwithfx;
 
+import javafx.embed.swing.SwingFXUtils;
 import javafx.event.ActionEvent;
 import javafx.fxml.FXML;
 import javafx.scene.control.Button;
-import javafx.scene.control.Label;
 import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
+import net.sourceforge.tess4j.ITesseract;
+import net.sourceforge.tess4j.Tesseract;
+import net.sourceforge.tess4j.TesseractException;
 import org.opencv.core.Mat;
 import org.opencv.imgproc.Imgproc;
 import org.opencv.videoio.VideoCapture;
 import org.production.opencvwithfx.utils.Utils;
 
-import java.util.Timer;
+import java.awt.image.BufferedImage;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -26,6 +29,10 @@ public class HelloController {
     private boolean cameraActive = false;
     private static int cameraId = 0;
 
+    private ITesseract iTesseract = new Tesseract();
+
+
+
     @FXML
     protected void startCamera(ActionEvent event) {
         if (!this.cameraActive) {
@@ -39,7 +46,7 @@ public class HelloController {
                     public void run() {
                         Mat frame = grabFrame();
                         Image imageToShow = Utils.mat2Image(frame);
-                        updateImageView(currentFrame, imageToShow);
+                        recognizeAndDisplayText(frame, iTesseract);
                     }
                 };
 
@@ -96,5 +103,25 @@ public class HelloController {
     protected void setClosed() {
         this.stopAcquisition();
     }
+
+    private void recognizeAndDisplayText(Mat frame, ITesseract tesseract) {
+        String result = performOCR(tesseract, Utils.mat2Image(frame));
+        saveResultAsString(result);
+    }
+
+    private String performOCR(ITesseract tesseract, Image image) {
+        try {
+            BufferedImage bufferedImage = SwingFXUtils.fromFXImage(image, null);
+            return tesseract.doOCR(bufferedImage);
+        } catch (TesseractException e) {
+            System.err.println("Error during OCR: " + e.getMessage());
+            return "OCR Error";
+        }
+    }
+
+    private void saveResultAsString(String result) {
+        System.out.println("Recognized text: " + result);
+    }
+
 
 }
